@@ -4,7 +4,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     return LaunchDescription([
         Node(
-            package='ml_studio_connector',
+            package='lm_studio_connector',
             executable='lm_studio_node',
             name='lm_studio_node',
             parameters=[{

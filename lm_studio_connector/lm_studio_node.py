@@ -248,7 +248,8 @@ class LMStudioNode(Node):
             # Extract response text
             if 'choices' in response and len(response['choices']) > 0:
                 response_text = response['choices'][0]['message']['content']
-                self.get_logger().info(f"Model response: {response_text}")
+#                self.get_logger().info(f"Model response: {response_text}")
+                self.get_logger().info(f"Model response: OK")
             else:
                 response_text = "No response generated"
                 self.get_logger().warn("No choices in response")
@@ -428,7 +429,8 @@ class LMStudioNode(Node):
             response_msg.data = json.dumps(response_data)
             
             self.text_response_pub.publish(response_msg)
-            self.get_logger().info(f"Published {response_type} response: {response_text[:100]}...")
+#            self.get_logger().info(f"Published {response_type} response: {response_text[:100]}...")
+            self.get_logger().info(f"Published {response_type} response: {response_text}")
             
         except Exception as e:
             self.get_logger().error(f"Error publishing response: {e}")
