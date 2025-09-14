@@ -1,0 +1,15 @@
+# Request
+string prompt
+string model
+int32 max_tokens
+float32 temperature
+float32 timeout
+
+---
+# Result
+string response
+bool success
+
+---
+# Feedback (optional)
+string partial_response

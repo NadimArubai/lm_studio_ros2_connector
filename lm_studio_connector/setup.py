@@ -23,6 +23,7 @@ setup(
     entry_points={
         'console_scripts': [
             'lm_studio_node = lm_studio_connector.lm_studio_node:main',
+            'lm_studio_debug_node = lm_studio_connector.lm_studio_debug_node:main',
         ],
     },
 )

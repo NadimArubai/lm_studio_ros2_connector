@@ -1,0 +1,23 @@
+lm_sutdio_connector
+├── lm_studio_interfaces/
+│   ├── package.xml
+│   ├── CMakeLists.txt
+│   ├── action/
+│   │   ├── ChatCompletion.action
+│   │   └── TextCompletion.action
+│   └── srv/
+│       ├── ListModels.srv
+│       ├── GetEmbeddings.srv
+│       ├── SetModel.srv
+│       └── ResetChat.srv
+└── lm_studio_connector/
+    ├── package.xml
+    ├── setup.py
+    ├── setup.cfg
+    ├── lm_studio_connector/
+    │   ├── __init__.py
+    │   ├── lm_studio_node.py
+    │   ├── lm_studio_debug_node.py
+    │   └── lm_studio_client.py
+    └── resource/
+        └── lm_studio_connector

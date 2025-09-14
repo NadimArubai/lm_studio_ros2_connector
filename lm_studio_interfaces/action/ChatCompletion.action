@@ -1,0 +1,17 @@
+# Request
+string prompt
+string model
+int32 max_tokens
+float32 temperature
+float32 timeout
+bool use_history
+string image_data
+
+---
+# Result
+string response
+bool success
+
+---
+# Feedback (optional for streaming)
+string partial_response

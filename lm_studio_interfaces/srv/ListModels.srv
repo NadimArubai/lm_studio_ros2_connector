@@ -1,0 +1,5 @@
+---
+string[] models
+int32 count
+bool success
+string error_message

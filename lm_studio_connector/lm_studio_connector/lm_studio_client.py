@@ -23,7 +23,7 @@ class LMStudioClient:
             'completions': '/v1/completions',
             'models': '/v1/models',
             'embeddings': '/v1/embeddings',
-            'files': '/v1/files'  # For file uploads
+#            'files': '/v1/files'  # For file uploads
         }
         
         self.session = requests.Session()
@@ -38,35 +38,35 @@ class LMStudioClient:
         self.session.headers.update(headers)
         self.logger = logging.getLogger('LMStudioClient')
     
-    def upload_image(self, image_path: str) -> Optional[str]:
-        """
-        Upload image to LM Studio and return file ID
-        """
-        try:
-            endpoint = f"{self.base_url}{self.endpoints['files']}"
-            
-            # Read image file
-            with open(image_path, 'rb') as f:
-                files = {'file': (Path(image_path).name, f, 'image/jpeg')}
-                
-                # Upload file
-                response = self.session.post(
-                    endpoint,
-                    files=files,
-                    timeout=self.timeout
-                )
-                response.raise_for_status()
-                
-                file_data = response.json()
-                file_id = file_data.get('id')
-                
-                self.logger.info(f"Uploaded image: {image_path}, file ID: {file_id}")
-                return file_id
-                
-        except Exception as e:
-            self.logger.error(f"Failed to upload image {image_path}: {e}")
-            return None
-    
+#    def upload_image(self, image_path: str) -> Optional[str]:
+#        """
+#        Upload image to LM Studio and return file ID
+#        """
+#        try:
+#            endpoint = f"{self.base_url}{self.endpoints['files']}"
+#            
+#            # Read image file
+#            with open(image_path, 'rb') as f:
+#                files = {'file': (Path(image_path).name, f, 'image/jpeg')}
+#                
+#                # Upload file
+#                response = self.session.post(
+#                    endpoint,
+#                    files=files,
+#                    timeout=self.timeout
+#                )
+#                response.raise_for_status()
+#                
+#                file_data = response.json()
+#                file_id = file_data.get('id')
+#                
+#                self.logger.info(f"Uploaded image: {image_path}, file ID: {file_id}")
+#                return file_id
+#                
+#        except Exception as e:
+#            self.logger.error(f"Failed to upload image {image_path}: {e}")
+#            return None
+#    
     def prepare_image(self, image_path: str) -> Optional[Dict[str, Any]]:
         """
         Prepare image for LM Studio - using base64 data URI format
