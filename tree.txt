@@ -1,23 +1,33 @@
-lm_sutdio_connector
-├── lm_studio_interfaces/
-│   ├── package.xml
-│   ├── CMakeLists.txt
-│   ├── action/
-│   │   ├── ChatCompletion.action
-│   │   └── TextCompletion.action
-│   └── srv/
-│       ├── ListModels.srv
-│       ├── GetEmbeddings.srv
-│       ├── SetModel.srv
-│       └── ResetChat.srv
-└── lm_studio_connector/
-    ├── package.xml
-    ├── setup.py
-    ├── setup.cfg
-    ├── lm_studio_connector/
-    │   ├── __init__.py
-    │   ├── lm_studio_node.py
-    │   ├── lm_studio_debug_node.py
-    │   └── lm_studio_client.py
-    └── resource/
-        └── lm_studio_connector
+lm_sutdio_ros2_connector
+├── lm_studio_connector
+│   ├── launch
+│   │   ├── lm_studio.launch.py
+│   │   └── lm_studio_topics.launch.py
+│   ├── lm_studio_connector
+│   │   ├── __init__.py
+│   │   ├── lm_studio_client.py
+│   │   ├── lm_studio_node.py
+│   │   └── lm_studio_topics_node.py
+│   ├── lm_studio_doc.html
+│   ├── package.xml
+│   ├── resource
+│   │   └── lm_studio_connector
+│   ├── setup.cfg
+│   ├── setup.py
+│   └── test
+│       ├── test_copyright.py
+│       ├── test_flake8.py
+│       └── test_pep257.py
+├── lm_studio_interfaces
+│   ├── action
+│   │   ├── ChatCompletion.action
+│   │   └── TextCompletion.action
+│   ├── CMakeLists.txt
+│   ├── package.xml
+│   └── srv
+│       ├── GetEmbeddings.srv
+│       ├── ListModels.srv
+│       ├── ResetChat.srv
+│       └── SetModel.srv
+├── README.md
+└── tree.txt
