@@ -14,6 +14,7 @@ lm_sutdio_connector
     ├── package.xml
     ├── setup.py
     ├── setup.cfg
+    ├── doc.html
     ├── lm_studio_connector/
     │   ├── __init__.py
     │   ├── lm_studio_node.py

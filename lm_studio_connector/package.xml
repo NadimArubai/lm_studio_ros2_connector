@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schemaLocation="http://download.ros.org/schema/package_format3.xsd package_format3.xsd"?>
 <package format="3">
-  <name>lm_studio_connector</name>
-  <version>0.0.0</version>
+  <name>lm_studio_ros2_connector</name>
+  <version>1.2.0</version>
   <description>ROS2 node for LM Studio API communication</description>
   <maintainer email="nadim.arubai@gmail.com">Nadim Arubai</maintainer>
   <license>Apache License 2.0</license>

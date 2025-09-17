@@ -29,7 +29,7 @@ lms get qwen2-vl-2b-instruct
 
 # Add to your ROS2 workspace
 cd ~/ros2_ws/src
-git clone <this-repository>
+git clone https://github.com/NadimArubai/lm_studio_ros2_connector.git
 cd ..
 colcon build --packages-select lm_studio_connector lm_studio_interfaces
 source install/setup.bash
@@ -84,6 +84,12 @@ bool success
 # Feedback
 string partial_response
 ```
+
+image_reference could be:
+* 'latest' for last sending image via the topic.
+* 'image_path' for a saved image on the hard.
+* start with "data:image/" for base64.
+
 
 ### Text Completion Action
 **Action Name**: `/text_completion`
@@ -295,3 +301,7 @@ For issues and questions:
 ## Contributing
 
 Contributions welcome! Please submit pull requests or open issues for bugs and feature requests.
+
+## Maintainer
+
+Nadim Arubai - nadim.arubai@gmail.com

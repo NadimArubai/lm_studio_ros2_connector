@@ -5,8 +5,8 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='lm_studio_ros2_connector',
-            executable='lm_studio_node',
-            name='lm_studio_node',
+            executable='lm_studio_topics_node',
+            name='lm_studio_topics_node',
             parameters=[{
                 'ml_studio_url': 'http://localhost:1234',
                 'api_key': 'your-api-key-here',

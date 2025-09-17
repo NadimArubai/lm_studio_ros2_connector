@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LM Studio ROS2 Connector Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin: 20px 0;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        h2 {
+            color: #667eea;
+            margin: 30px 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        h3 {
+            color: #764ba2;
+            margin: 20px 0 10px 0;
+        }
+        
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            backdrop-filter: blur(10px);
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .feature {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .feature h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            color: #333;
+        }
+        
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            line-height: 1.4;
+        }
+        
+        .code-block {
+            position: relative;
+        }
+        
+        .code-block::before {
+            content: 'Terminal';
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 0 8px 0 8px;
+            font-size: 0.8em;
+            z-index: 1;
+        }
+        
+        .example {
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #4299e1;
+        }
+        
+        .tip {
+            background: #fff9db;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #f59f00;
+        }
+        
+        .warning {
+            background: #fff5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #e53e3e;
+        }
+        
+        .json-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        
+        .button {
+            display: inline-block;
+            padding: 12px 25px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: white;
+        }
+        
+        .terminal-code {
+            background: #1a202c;
+            color: #a0aec0;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            line-height: 1.4;
+            border-left: 4px solid #667eea;
+        }
+        
+        .terminal-code .comment {
+            color: #718096;
+            font-style: italic;
+        }
+        
+        .terminal-code .command {
+            color: #68d391;
+            font-weight: bold;
+        }
+        
+        .terminal-code .path {
+            color: #63b3ed;
+        }
+        
+        .terminal-code .string {
+            color: #f6ad55;
+        }
+        
+        @media (max-width: 768px) {
+            .features {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>LM Studio ROS2 Connector</h1>
+            <p>A ROS2 node for integrating LM Studio's local LLM API with robotics applications</p>
+            <div class="badges">
+                <span class="badge">🤖 Dual Interface</span>
+                <span class="badge">🖼️ Multimodal Support</span>
+                <span class="badge">⚡ Real-time</span>
+                <span class="badge">📊 Model Management</span>
+                <span class="badge">🏥 Health Monitoring</span>
+                <span class="badge">🎯 Production Ready</span>
+            </div>
+        </header>
+
+        <h2>Features</h2>
+        <div class="features">
+            <div class="feature">
+                <h3>🤖 Dual Interface</h3>
+                <p>Action/Service for production, Topics for debugging and backward compatibility</p>
+            </div>
+            <div class="feature">
+                <h3>🖼️ Multimodal Support</h3>
+                <p>Image input processing for Vision-Language Models (VLMs) with multiple input methods</p>
+            </div>
+            <div class="feature">
+                <h3>📝 Multiple Modalities</h3>
+                <p>Chat completion, text completion, and embeddings generation</p>
+            </div>
+            <div class="feature">
+                <h3>🔍 Model Management</h3>
+                <p>Dynamic model switching and automatic model discovery</p>
+            </div>
+            <div class="feature">
+                <h3>⚡ Real-time Integration</h3>
+                <p>ROS2 interfaces for seamless robotics integration</p>
+            </div>
+            <div class="feature">
+                <h3>🏥 Health Monitoring</h3>
+                <p>Connection status and health checks for reliable operation</p>
+            </div>
+        </div>
+
+        <h2>Prerequisites</h2>
+        <ul>
+            <li>ROS2 Humble or newer</li>
+            <li>Python 3.8+</li>
+            <li>LM Studio running locally (default: http://localhost:1234)</li>
+            <li>A Vision-Language Model (VLM) like <code>qwen2-vl-2b-instruct</code> for image support</li>
+        </ul>
+
+        <h2>Installation</h2>
+        <div class="terminal-code">
+            <span class="comment"># Install LM Studio from lmstudio.ai</span><br>
+            <br>
+            <span class="comment"># Download a VLM (for image support)</span><br>
+            <span class="command">lms get</span> <span class="string">qwen2-vl-2b-instruct</span><br>
+            <br>
+            <span class="comment"># Add to your ROS2 workspace</span><br>
+            <span class="command">cd</span> <span class="path">~/ros2_ws/src</span><br>
+            <span class="command">git clone</span> <span class="string">https://github.com/NadimArubai/lm_studio_ros2_connector.git</span><br>
+            <span class="command">cd</span> <span class="path">..</span><br>
+            <span class="command">colcon build</span> <span class="string">--packages-select lm_studio_connector lm_studio_interfaces</span><br>
+            <span class="command">source install/setup.bash</span>
+        </div>
+
+        <h2>Node Types</h2>
+        
+        <h3>1. Main Node (Actions/Services - Recommended)</h3>
+        <div class="terminal-code">
+            <span class="command">ros2 run</span> <span class="string">lm_studio_connector lm_studio_node</span>
+        </div>
+        <p><strong>Production-ready</strong> with action servers and services for reliable integration.</p>
+        
+        <h3>2. Debug Node (Topics - Legacy)</h3>
+        <div class="terminal-code">
+            <span class="command">ros2 run</span> <span class="string">lm_studio_connector lm_studio_debug_node</span>
+        </div>
+        <p><strong>Backward compatibility</strong> with the old topic-based interface.</p>
+
+        <h2>Configuration Parameters</h2>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Default</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td><code>lm_studio_url</code></td>
+                <td><code>http://localhost:1234</code></td>
+                <td>LM Studio API URL</td>
+            </tr>
+            <tr>
+                <td><code>api_key</code></td>
+                <td><code>""</code></td>
+                <td>API key (if required)</td>
+            </tr>
+            <tr>
+                <td><code>model_name</code></td>
+                <td><code>"local-model"</code></td>
+                <td>Default model to use</td>
+            </tr>
+            <tr>
+                <td><code>max_tokens</code></td>
+                <td><code>500</code></td>
+                <td>Maximum response tokens</td>
+            </tr>
+            <tr>
+                <td><code>temperature</code></td>
+                <td><code>0.7</code></td>
+                <td>Creativity level (0.0-1.0)</td>
+            </tr>
+            <tr>
+                <td><code>timeout</code></td>
+                <td><code>30</code></td>
+                <td>API timeout in seconds</td>
+            </tr>
+            <tr>
+                <td><code>stream</code></td>
+                <td><code>false</code></td>
+                <td>Stream responses</td>
+            </tr>
+            <tr>
+                <td><code>max_history_length</code></td>
+                <td><code>10</code></td>
+                <td>Chat history context length</td>
+            </tr>
+        </table>
+
+        <h2>Action Interface (Recommended)</h2>
+        
+        <h3>Chat Completion Action</h3>
+        <p><strong>Action Name</strong>: <code>/chat_completion</code></p>
+        <div class="json-block">
+// Request
+string prompt
+string model
+int32 max_tokens
+float32 temperature
+float32 timeout
+bool use_history
+string image_reference  # "latest" or image ID
+
+// Result  
+string response
+bool success
+
+// Feedback
+string partial_response
+        </div>
+        <p><code>image_reference</code> could be:</p>
+        <ul>
+            <li>'latest' for last sending image via the topic</li>
+            <li>'image_path' for a saved image on the hard drive</li>
+            <li>Start with "data:image/" for base64 encoded image</li>
+        </ul>
+        
+        <h3>Text Completion Action</h3>
+        <p><strong>Action Name</strong>: <code>/text_completion</code></p>
+        <div class="json-block">
+// Request
+string prompt
+string model
+int32 max_tokens
+float32 temperature
+float32 timeout
+
+// Result
+string response
+bool success
+        </div>
+
+        <h2>Service Interface</h2>
+        <p><strong>Available Services:</strong></p>
+        <ul>
+            <li><code>/list_models</code> - Get available models</li>
+            <li><code>/get_embeddings</code> - Generate text embeddings</li>
+            <li><code>/set_model</code> - Change active model</li>
+            <li><code>/reset_chat</code> - Clear conversation history</li>
+        </ul>
+
+        <h2>Topic Interface (Legacy/Debug)</h2>
+        
+        <h3>Subscribers (Input)</h3>
+        <table>
+            <tr>
+                <th>Topic</th>
+                <th>Message Type</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td><code>/chat_input</code></td>
+                <td><code>std_msgs/String</code></td>
+                <td>Text chat messages</td>
+            </tr>
+            <tr>
+                <td><code>/completion_input</code></td>
+                <td><code>std_msgs/String</code></td>
+                <td>Text completion prompts</td>
+            </tr>
+            <tr>
+                <td><code>/image_input</code></td>
+                <td><code>sensor_msgs/Image</code></td>
+                <td>Raw image data</td>
+            </tr>
+            <tr>
+                <td><code>/image_input/compressed</code></td>
+                <td><code>sensor_msgs/CompressedImage</code></td>
+                <td>Compressed image data</td>
+            </tr>
+            <tr>
+                <td><code>/image_file_input</code></td>
+                <td><code>std_msgs/String</code></td>
+                <td>Path to image file</td>
+            </tr>
+            <tr>
+                <td><code>/chat_with_image</code></td>
+                <td><code>std_msgs/String</code></td>
+                <td>Text prompt for current image</td>
+            </tr>
+        </table>
+
+        <h3>Publishers (Output)</h3>
+        <table>
+            <tr>
+                <th>Topic</th>
+                <th>Message Type</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td><code>/lm_text_response</code></td>
+                <td><code>std_msgs/String</code></td>
+                <td>AI responses (JSON formatted)</td>
+            </tr>
+            <tr>
+                <td><code>/lm_studio_status</code></td>
+                <td><code>std_msgs/String</code></td>
+                <td>Node status and health</td>
+            </tr>
+            <tr>
+                <td><code>/available_models</code></td>
+                <td><code>std_msgs/String</code></td>
+                <td>List of available models</td>
+            </tr>
+        </table>
+
+        <h2>Usage Examples</h2>
+        
+        <div class="example">
+            <h3>1. Using Actions (Recommended)</h3>
+            <div class="terminal-code">
+                <span class="comment"># Chat with image (using latest received image)</span><br>
+                <span class="command">ros2 action send_goal</span> <span class="string">/chat_completion lm_studio_interfaces/action/ChatCompletion</span> <span class="string">"prompt: 'Describe this image' use_history: true image_reference: 'latest' max_tokens: 300 temperature: 0.3"</span><br>
+                <br>
+                <span class="comment"># Text completion</span><br>
+                <span class="command">ros2 action send_goal</span> <span class="string">/text_completion lm_studio_interfaces/action/TextCompletion</span> <span class="string">"prompt: 'The future of robotics is' max_tokens: 200"</span>
+            </div>
+        </div>
+
+        <div class="example">
+            <h3>2. Using Services</h3>
+            <div class="terminal-code">
+                <span class="comment"># List available models</span><br>
+                <span class="command">ros2 service call</span> <span class="string">/list_models lm_studio_interfaces/srv/ListModels</span><br>
+                <br>
+                <span class="comment"># Get embeddings</span><br>
+                <span class="command">ros2 service call</span> <span class="string">/get_embeddings lm_studio_interfaces/srv/GetEmbeddings</span> <span class="string">"text: 'Hello world'"</span><br>
+                <br>
+                <span class="comment"># Set model</span><br>
+                <span class="command">ros2 service call</span> <span class="string">/set_model lm_studio_interfaces/srv/SetModel</span> <span class="string">"model_name: 'qwen2-vl-2b-instruct'"</span><br>
+                <br>
+                <span class="comment"># Reset chat</span><br>
+                <span class="command">ros2 service call</span> <span class="string">/reset_chat lm_studio_interfaces/srv/ResetChat</span>
+            </div>
+        </div>
+
+        <div class="example">
+            <h3>3. Using Topics (Legacy)</h3>
+            <div class="terminal-code">
+                <span class="comment"># Send image</span><br>
+                <span class="command">ros2 topic pub</span> <span class="string">/image_file_input std_msgs/String</span> <span class="string">"data: '/path/to/image.jpg'"</span><br>
+                <br>
+                <span class="comment"># Chat with image</span><br>
+                <span class="command">ros2 topic pub</span> <span class="string">/chat_with_image std_msgs/String</span> <span class="string">"data: 'Describe this image'"</span><br>
+                <br>
+                <span class="comment"># Monitor responses</span><br>
+                <span class="command">ros2 topic echo</span> <span class="string">/lm_text_response</span>
+            </div>
+        </div>
+
+        <h2>Image Handling</h2>
+        
+        <h3>Supported Methods:</h3>
+        <ul>
+            <li><strong>ROS2 Image Messages</strong> (<code>sensor_msgs/Image</code>) - Real-time camera data</li>
+            <li><strong>File Paths</strong> - Pre-captured images</li>
+            <li><strong>Compressed Images</strong> - Efficient transport</li>
+            <li><strong>Image References</strong> - Reference previously sent images</li>
+        </ul>
+        
+        <h3>Best Practices:</h3>
+        <div class="terminal-code">
+            <span class="comment"># Send image first</span><br>
+            <span class="command">ros2 topic pub</span> <span class="string">/image_file_input std_msgs/String</span> <span class="string">"data: '/home/user/image.jpg'"</span><br>
+            <br>
+            <span class="comment"># Then reference it in actions</span><br>
+            <span class="command">ros2 action send_goal</span> <span class="string">/chat_completion ChatCompletion</span> <span class="string">"prompt: 'Describe this image' image_reference: 'latest'"</span>
+        </div>
+
+        <h2>Response Format</h2>
+        <p><strong>JSON responses on <code>/lm_text_response</code>:</strong></p>
+        <div class="json-block">
+{
+  "text": "The generated response text",
+  "type": "chat_action", 
+  "model": "qwen2-vl-2b-instruct",
+  "timestamp": 1700000000,
+  "history_length": 3
+}
+        </div>
+
+        <h2>Python Client Example</h2>
+        <div class="terminal-code">
+<span class="comment">#!/usr/bin/env python3</span><br>
+<br>
+<span class="command">import</span> rclpy<br>
+<span class="command">from</span> rclpy.action <span class="command">import</span> ActionClient<br>
+<span class="command">from</span> lm_studio_interfaces.action <span class="command">import</span> ChatCompletion<br>
+<br>
+<span class="command">class</span> LMStudioClient:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">def</span> <span class="function">__init__</span>(self):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.node = rclpy.create_node(<span class="string">'lm_client'</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.chat_client = ActionClient(self.node, ChatCompletion, <span class="string">'chat_completion'</span>)<br>
+    <br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">async def</span> <span class="function">chat</span>(self, prompt, use_history=True):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;goal_msg = ChatCompletion.Goal()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;goal_msg.prompt = prompt<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;goal_msg.use_history = use_history<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;goal_msg.image_reference = <span class="string">'latest'</span><br>
+        <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">await</span> self.chat_client.wait_for_server()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;result = <span class="command">await</span> self.chat_client.send_goal_async(goal_msg)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">return</span> result<br>
+<br>
+<span class="comment"># Usage</span><br>
+client = LMStudioClient()<br>
+result = client.chat(<span class="string">"Hello, how are you?"</span>)
+        </div>
+
+        <h2>Integration Examples</h2>
+        
+        <h3>With USB Camera</h3>
+        <div class="terminal-code">
+            <span class="comment"># Terminal 1: Start camera</span><br>
+            <span class="command">ros2 run</span> <span class="string">usb_cam usb_cam_node_exe</span><br>
+            <br>
+            <span class="comment"># Terminal 2: Start LM Studio node</span><br>
+            <span class="command">ros2 run</span> <span class="string">lm_studio_connector lm_studio_node</span><br>
+            <br>
+            <span class="comment"># Terminal 3: Process images and chat</span><br>
+            <span class="command">ros2 topic pub</span> <span class="string">/image_input sensor_msgs/Image &lt;camera_topic&gt;</span><br>
+            <span class="command">ros2 action send_goal</span> <span class="string">/chat_completion ChatCompletion "prompt: 'What objects are visible?' image_reference: 'latest'"</span>
+        </div>
+
+        <h2>Troubleshooting</h2>
+        
+        <h3>Common Issues</h3>
+        <p><strong>LM Studio not running:</strong></p>
+        <div class="terminal-code">
+            <span class="comment"># Check connection</span><br>
+            <span class="command">curl</span> <span class="string">http://localhost:1234/v1/models</span>
+        </div>
+        
+        <p><strong>No VLM model loaded:</strong></p>
+        <div class="terminal-code">
+            <span class="comment"># Download vision model</span><br>
+            <span class="command">lms get</span> <span class="string">qwen2-vl-2b-instruct</span>
+        </div>
+        
+        <p><strong>Debug mode:</strong></p>
+        <div class="terminal-code">
+            <span class="command">ros2 run</span> <span class="string">lm_studio_connector lm_studio_node --ros-args --log-level debug</span>
+        </div>
+
+        <h3>Performance Tips</h3>
+        <ul>
+            <li>Use appropriate model sizes for your hardware</li>
+            <li>Adjust <code>max_tokens</code> based on response length needs</li>
+            <li>Set <code>temperature</code> lower (0.1-0.3) for deterministic responses</li>
+            <li>Use <code>reset_chat</code> service to manage context length</li>
+            <li>Monitor <code>/lm_studio_status</code> for system health</li>
+        </ul>
+
+        <div class="tip">
+            <strong>💡 Tip:</strong> For production use, prefer the Action interface over Topics for better reliability and error handling.
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Note:</strong> Make sure LM Studio is running and you have a compatible VLM model loaded for image processing capabilities.
+        </div>
+
+        <h2>License</h2>
+        <p>MIT License - see LICENSE file for details.</p>
+
+        <h2>Support</h2>
+        <p>For issues and questions:</p>
+        <ul>
+            <li>Check LM Studio documentation: lmstudio.ai/docs</li>
+            <li>Ensure LM Studio is running and accessible</li>
+            <li>Verify you have compatible models downloaded</li>
+            <li>Check ROS2 interface connections</li>
+        </ul>
+
+        <h2>Contributing</h2>
+        <p>Contributions welcome! Please submit pull requests or open issues for bugs and feature requests.</p>
+
+        <h2>Maintainer</h2>
+        <p>Nadim Arubai - nadim.arubai@gmail.com</p>
+
+        <div style="text-align: center; margin: 40px 0;">
+            <a href="https://github.com/NadimArubai/lm_studio_ros2_connector" class="button">View Source Code</a>
+            <a href="https://github.com/NadimArubai/lm_studio_ros2_connector/archive/refs/heads/main.zip" class="button">Download Package</a>
+            <a href="https://github.com/NadimArubai/lm_studio_ros2_connector/issues" class="button">Report Issue</a>
+        </div>
+    </div>
+
+    <footer>
+        <p>LM Studio ROS2 Connector Documentation | Built with ❤️ for the ROS2 community</p>
+    </footer>
+</body>
+</html>
