@@ -409,7 +409,7 @@ class LMStudioNode(Node):
             response.message = str(e)
             return response
 
-    # Image handling methods (unchanged from your original implementation)
+    # Image handling methods
     def image_file_input_callback(self, msg: String):
         """Handle image file path input"""
         try:

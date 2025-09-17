@@ -45,7 +45,7 @@ ros2 run lm_studio_connector lm_studio_node
 
 ### 2. Debug Node (Topics - Legacy)
 ```bash
-ros2 run lm_studio_connector lm_studio_debug_node
+ros2 run lm_studio_connector lm_studio_topics_node
 ```
 **Backward compatibility** with the old topic-based interface.
 
@@ -75,7 +75,7 @@ int32 max_tokens
 float32 temperature
 float32 timeout
 bool use_history
-string image_reference  # "latest" or image ID
+string image_reference  # "latest" or image path or base64
 
 # Result  
 string response
@@ -86,9 +86,9 @@ string partial_response
 ```
 
 image_reference could be:
-* 'latest' for last sending image via the topic.
+* 'latest' for last sending image via the image topic or filepath topic.
 * 'image_path' for a saved image on the hard.
-* start with "data:image/" for base64.
+* a string start with "data:image/" for base64.
 
 
 ### Text Completion Action
