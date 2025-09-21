@@ -14,8 +14,8 @@ A ROS2 node for integrating LM Studio's local LLM API with robotics applications
 
 ## Prerequisites
 
-- ROS2 Humble or newer
-- Python 3.8+
+- ROS 2 (Tested on Jazyy, but should work with Foxy, Galactic, Humble, or newer)
+- Python (Tested on 3.12, but should work with 3.8+)
 - LM Studio running locally (default: http://localhost:1234)
 - A Vision-Language Model (VLM) like qwen2-vl-2b-instruct for image support
 
