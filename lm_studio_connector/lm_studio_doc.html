@@ -241,6 +241,39 @@
             color: #f6ad55;
         }
         
+        .streaming-feature {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .streaming-feature h3 {
+            color: white;
+            margin-bottom: 15px;
+        }
+        
+        .streaming-modes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .streaming-mode {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: left;
+        }
+        
+        .streaming-mode h4 {
+            color: #68d391;
+            margin-bottom: 10px;
+        }
+        
         @media (max-width: 768px) {
             .features {
                 grid-template-columns: 1fr;
@@ -252,6 +285,10 @@
             
             h1 {
                 font-size: 2em;
+            }
+            
+            .streaming-modes {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -268,6 +305,7 @@
                 <span class="badge">📊 Model Management</span>
                 <span class="badge">🏥 Health Monitoring</span>
                 <span class="badge">🎯 Production Ready</span>
+                <span class="badge">🚀 Streaming Support</span>
             </div>
         </header>
 
@@ -296,6 +334,29 @@
             <div class="feature">
                 <h3>🏥 Health Monitoring</h3>
                 <p>Connection status and health checks for reliable operation</p>
+            </div>
+            <div class="feature">
+                <h3>🚀 Streaming Support</h3>
+                <p>Real-time token streaming with progress feedback for long responses</p>
+            </div>
+        </div>
+
+        <div class="streaming-feature">
+            <h3>🚀 New: Streaming Support</h3>
+            <p>Real-time token streaming and progress feedback for enhanced user experience</p>
+            <div class="streaming-modes">
+                <div class="streaming-mode">
+                    <h4>📡 Real-time Streaming</h4>
+                    <p>Token-by-token feedback as responses are generated</p>
+                </div>
+                <div class="streaming-mode">
+                    <h4>📊 Progress Feedback</h4>
+                    <p>Periodic updates during long processing tasks</p>
+                </div>
+                <div class="streaming-mode">
+                    <h4>⚡ Standard Mode</h4>
+                    <p>Traditional blocking requests for short responses</p>
+                </div>
             </div>
         </div>
 
@@ -398,6 +459,8 @@ float32 temperature
 float32 timeout
 bool use_history
 string image_reference  # "latest" or image ID
+bool stream             # Enable real-time token streaming
+bool progress_feedback  # Enable periodic progress updates
 
 // Result  
 string response
@@ -405,7 +468,15 @@ bool success
 
 // Feedback
 string partial_response
+string status
+float32 progress
         </div>
+        <p><strong>Streaming Modes:</strong></p>
+        <ul>
+            <li><code>stream=true</code>: Real-time token-by-token feedback</li>
+            <li><code>progress_feedback=true</code>: Periodic progress updates during processing</li>
+            <li>Both false: Standard blocking request</li>
+        </ul>
         <p><code>image_reference</code> could be:</p>
         <ul>
             <li>'latest' for last sending image via the topic</li>
@@ -422,10 +493,17 @@ string model
 int32 max_tokens
 float32 temperature
 float32 timeout
+bool stream             # Enable real-time token streaming
+bool progress_feedback  # Enable periodic progress updates
 
 // Result
 string response
 bool success
+
+// Feedback
+string partial_response
+string status
+float32 progress
         </div>
 
         <h2>Service Interface</h2>
@@ -506,12 +584,29 @@ bool success
         
         <div class="example">
             <h3>1. Using Actions (Recommended)</h3>
+            
+            <h4>Standard Chat (Blocking)</h4>
             <div class="terminal-code">
                 <span class="comment"># Chat with image (using latest received image)</span><br>
-                <span class="command">ros2 action send_goal</span> <span class="string">/chat_completion lm_studio_interfaces/action/ChatCompletion</span> <span class="string">"prompt: 'Describe this image' use_history: true image_reference: 'latest' max_tokens: 300 temperature: 0.3"</span><br>
-                <br>
-                <span class="comment"># Text completion</span><br>
-                <span class="command">ros2 action send_goal</span> <span class="string">/text_completion lm_studio_interfaces/action/TextCompletion</span> <span class="string">"prompt: 'The future of robotics is' max_tokens: 200"</span>
+                <span class="command">ros2 action send_goal</span> <span class="string">/chat_completion lm_studio_interfaces/action/ChatCompletion</span> <span class="string">"prompt: 'Describe this image' use_history: true image_reference: 'latest' max_tokens: 300 temperature: 0.3 stream: false progress_feedback: false"</span><br>
+            </div>
+            
+            <h4>Streaming Chat (Real-time tokens)</h4>
+            <div class="terminal-code">
+                <span class="comment"># Stream response tokens in real-time</span><br>
+                <span class="command">ros2 action send_goal</span> <span class="string">/chat_completion lm_studio_interfaces/action/ChatCompletion</span> <span class="string">"prompt: 'Explain the future of robotics' use_history: true max_tokens: 500 stream: true progress_feedback: false"</span> <span class="string">--feedback</span><br>
+            </div>
+            
+            <h4>Progress Feedback Chat</h4>
+            <div class="terminal-code">
+                <span class="comment"># Get periodic progress updates during long processing</span><br>
+                <span class="command">ros2 action send_goal</span> <span class="string">/chat_completion lm_studio_interfaces/action/ChatCompletion</span> <span class="string">"prompt: 'Write a detailed analysis' max_tokens: 1000 stream: false progress_feedback: true"</span> <span class="string">--feedback</span><br>
+            </div>
+            
+            <h4>Text Completion with Streaming</h4>
+            <div class="terminal-code">
+                <span class="comment"># Text completion with real-time streaming</span><br>
+                <span class="command">ros2 action send_goal</span> <span class="string">/text_completion lm_studio_interfaces/action/TextCompletion</span> <span class="string">"prompt: 'The future of robotics is' max_tokens: 200 stream: true progress_feedback: false"</span> <span class="string">--feedback</span><br>
             </div>
         </div>
 
@@ -561,8 +656,8 @@ bool success
             <span class="comment"># Send image first</span><br>
             <span class="command">ros2 topic pub</span> <span class="string">/image_file_input std_msgs/String</span> <span class="string">"data: '/home/user/image.jpg'"</span><br>
             <br>
-            <span class="comment"># Then reference it in actions</span><br>
-            <span class="command">ros2 action send_goal</span> <span class="string">/chat_completion ChatCompletion</span> <span class="string">"prompt: 'Describe this image' image_reference: 'latest'"</span>
+            <span class="comment"># Then reference it in actions with streaming</span><br>
+            <span class="command">ros2 action send_goal</span> <span class="string">/chat_completion ChatCompletion</span> <span class="string">"prompt: 'Describe this image' image_reference: 'latest' stream: true"</span> <span class="string">--feedback</span>
         </div>
 
         <h2>Response Format</h2>
@@ -570,44 +665,90 @@ bool success
         <div class="json-block">
 {
   "text": "The generated response text",
-  "type": "chat_action", 
+  "type": "chat_action_stream", 
   "model": "qwen2-vl-2b-instruct",
   "timestamp": 1700000000,
   "history_length": 3
 }
         </div>
 
-        <h2>Python Client Example</h2>
+        <h2>Python Client Example with Streaming</h2>
         <div class="terminal-code">
 <span class="comment">#!/usr/bin/env python3</span><br>
 <br>
 <span class="command">import</span> rclpy<br>
 <span class="command">from</span> rclpy.action <span class="command">import</span> ActionClient<br>
+<span class="command">from</span> rclpy.node <span class="command">import</span> Node<br>
+<br>
 <span class="command">from</span> lm_studio_interfaces.action <span class="command">import</span> ChatCompletion<br>
 <br>
-<span class="command">class</span> LMStudioClient:<br>
+<span class="command">class</span> MinimalChatClient(Node):<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="command">def</span> <span class="function">__init__</span>(self):<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.node = rclpy.create_node(<span class="string">'lm_client'</span>)<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.chat_client = ActionClient(self.node, ChatCompletion, <span class="string">'chat_completion'</span>)<br>
-    <br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">async def</span> <span class="function">chat</span>(self, prompt, use_history=True):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">super</span>().<span class="function">__init__</span>(<span class="string">'minimal_chat_client'</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.action_client = ActionClient(self, ChatCompletion, <span class="string">'chat_completion'</span>)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">def</span> <span class="function">chat</span>(self, prompt):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"""Minimal chat example with callbacks"""</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Wait for server</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.action_client.wait_for_server()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Create goal</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;goal_msg = ChatCompletion.Goal()<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;goal_msg.prompt = prompt<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;goal_msg.use_history = use_history<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;goal_msg.image_reference = <span class="string">'latest'</span><br>
-        <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">await</span> self.chat_client.wait_for_server()<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;result = <span class="command">await</span> self.chat_client.send_goal_async(goal_msg)<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">return</span> result<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;goal_msg.use_history = True<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;goal_msg.stream = False<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Send goal with callbacks</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.action_client.send_goal_async(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;goal_msg,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;feedback_callback=self._feedback_cb<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;).add_done_callback(self._goal_response_cb)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.get_logger().info(<span class="string">f"Sent: {prompt}"</span>)<br>
 <br>
-<span class="comment"># Usage</span><br>
-client = LMStudioClient()<br>
-result = client.chat(<span class="string">"Hello, how are you?"</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">def</span> <span class="function">_goal_response_cb</span>(self, future):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"""Handle goal acceptance"""</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;goal_handle = future.result()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">if</span> goal_handle.accepted:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;goal_handle.get_result_async().add_done_callback(self._result_cb)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.get_logger().info(<span class="string">"Goal accepted"</span>)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">def</span> <span class="function">_feedback_cb</span>(self, feedback_msg):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"""Handle feedback"""</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;feedback = feedback_msg.feedback<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">if</span> feedback.partial_response:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">print</span>(feedback.partial_response, end=<span class="string">''</span>, flush=True)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">def</span> <span class="function">_result_cb</span>(self, future):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">"""Handle final result"""</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;result = future.result().result<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">if</span> result.success:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.get_logger().info(<span class="string">f"Success: {result.response}"</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="command">else</span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.get_logger().error(<span class="string">f"Failed: {result.response}"</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Shutdown after receiving result</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rclpy.shutdown()<br>
+<br>
+<br>
+<span class="command">def</span> <span class="function">main</span>():<br>
+&nbsp;&nbsp;&nbsp;&nbsp;rclpy.init()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;client = MinimalChatClient()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Send a chat message</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;client.chat(<span class="string">"Hello, how are you?"</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Keep spinning to receive callbacks</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;rclpy.spin(client)<br>
+<br>
+<span class="command">if</span> __name__ == <span class="string">'__main__'</span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;main()
         </div>
-
+        
         <h2>Integration Examples</h2>
         
-        <h3>With USB Camera</h3>
+        <h3>With USB Camera and Streaming</h3>
         <div class="terminal-code">
             <span class="comment"># Terminal 1: Start camera</span><br>
             <span class="command">ros2 run</span> <span class="string">usb_cam usb_cam_node_exe</span><br>
@@ -615,9 +756,9 @@ result = client.chat(<span class="string">"Hello, how are you?"</span>)
             <span class="comment"># Terminal 2: Start LM Studio node</span><br>
             <span class="command">ros2 run</span> <span class="string">lm_studio_connector lm_studio_node</span><br>
             <br>
-            <span class="comment"># Terminal 3: Process images and chat</span><br>
+            <span class="comment"># Terminal 3: Process images and chat with streaming</span><br>
             <span class="command">ros2 topic pub</span> <span class="string">/image_input sensor_msgs/Image &lt;camera_topic&gt;</span><br>
-            <span class="command">ros2 action send_goal</span> <span class="string">/chat_completion ChatCompletion "prompt: 'What objects are visible?' image_reference: 'latest'"</span>
+            <span class="command">ros2 action send_goal</span> <span class="string">/chat_completion ChatCompletion "prompt: 'What objects are visible?' image_reference: 'latest' stream: true" --feedback</span>
         </div>
 
         <h2>Troubleshooting</h2>
@@ -635,6 +776,13 @@ result = client.chat(<span class="string">"Hello, how are you?"</span>)
             <span class="command">lms get</span> <span class="string">qwen2-vl-2b-instruct</span>
         </div>
         
+        <p><strong>Streaming not working:</strong></p>
+        <ul>
+            <li>Ensure LM Studio supports streaming for your model</li>
+            <li>Check that <code>stream=true</code> is set in action goal</li>
+            <li>Use <code>--feedback</code> flag to see streaming output</li>
+        </ul>
+        
         <p><strong>Debug mode:</strong></p>
         <div class="terminal-code">
             <span class="command">ros2 run</span> <span class="string">lm_studio_connector lm_studio_node --ros-args --log-level debug</span>
@@ -647,14 +795,16 @@ result = client.chat(<span class="string">"Hello, how are you?"</span>)
             <li>Set <code>temperature</code> lower (0.1-0.3) for deterministic responses</li>
             <li>Use <code>reset_chat</code> service to manage context length</li>
             <li>Monitor <code>/lm_studio_status</code> for system health</li>
+            <li>Use streaming for long responses to provide real-time feedback</li>
+            <li>Use progress feedback for very long processing tasks</li>
         </ul>
 
         <div class="tip">
-            <strong>💡 Tip:</strong> For production use, prefer the Action interface over Topics for better reliability and error handling.
+            <strong>💡 Tip:</strong> For production use, prefer the Action interface over Topics for better reliability and error handling. Use streaming for long responses to improve user experience.
         </div>
 
         <div class="warning">
-            <strong>⚠️ Note:</strong> Make sure LM Studio is running and you have a compatible VLM model loaded for image processing capabilities.
+            <strong>⚠️ Note:</strong> Make sure LM Studio is running and you have a compatible VLM model loaded for image processing capabilities. For streaming, verify your model supports streaming.
         </div>
 
         <h2>License</h2>
@@ -667,6 +817,7 @@ result = client.chat(<span class="string">"Hello, how are you?"</span>)
             <li>Ensure LM Studio is running and accessible</li>
             <li>Verify you have compatible models downloaded</li>
             <li>Check ROS2 interface connections</li>
+            <li>For streaming issues, verify model supports streaming</li>
         </ul>
 
         <h2>Contributing</h2>
