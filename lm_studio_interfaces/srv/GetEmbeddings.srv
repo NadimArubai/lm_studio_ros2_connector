@@ -1,6 +1,6 @@
 string text
 string model
-float32 timeout
+int32 timeout
 ---
 float64[] embeddings
 int32 dimensions

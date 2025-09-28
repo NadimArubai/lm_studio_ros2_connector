@@ -5,12 +5,12 @@ import json
 import logging
 import base64
 import mimetypes
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional, Union, Iterator
 from pathlib import Path
 
 class LMStudioClient:
     """
-    Client optimized for LM Studio API endpoints with image support
+    Client optimized for LM Studio API endpoints with image support and streaming
     """
     
     def __init__(self, base_url: str, api_key: str = None):
@@ -23,7 +23,6 @@ class LMStudioClient:
             'completions': '/v1/completions',
             'models': '/v1/models',
             'embeddings': '/v1/embeddings',
-#            'files': '/v1/files'  # For file uploads
         }
         
         self.session = requests.Session()
@@ -38,54 +37,18 @@ class LMStudioClient:
         self.session.headers.update(headers)
         self.logger = logging.getLogger('LMStudioClient')
     
-#    def upload_image(self, image_path: str) -> Optional[str]:
-#        """
-#        Upload image to LM Studio and return file ID
-#        """
-#        try:
-#            endpoint = f"{self.base_url}{self.endpoints['files']}"
-#            
-#            # Read image file
-#            with open(image_path, 'rb') as f:
-#                files = {'file': (Path(image_path).name, f, 'image/jpeg')}
-#                
-#                # Upload file
-#                response = self.session.post(
-#                    endpoint,
-#                    files=files,
-#                    timeout=self.timeout
-#                )
-#                response.raise_for_status()
-#                
-#                file_data = response.json()
-#                file_id = file_data.get('id')
-#                
-#                self.logger.info(f"Uploaded image: {image_path}, file ID: {file_id}")
-#                return file_id
-#                
-#        except Exception as e:
-#            self.logger.error(f"Failed to upload image {image_path}: {e}")
-#            return None
-#    
     def prepare_image(self, image_path: str) -> Optional[Dict[str, Any]]:
-        """
-        Prepare image for LM Studio - using base64 data URI format
-        This is the format LM Studio typically expects
-        """
+        """Prepare image for LM Studio - using base64 data URI format"""
         try:
-            # Read and encode image
             with open(image_path, 'rb') as f:
                 image_data = f.read()
             
-            # Get MIME type
             mime_type, _ = mimetypes.guess_type(image_path)
             if not mime_type:
-                mime_type = 'image/jpeg'  # default
+                mime_type = 'image/jpeg'
             
-            # Encode to base64
             base64_image = base64.b64encode(image_data).decode('utf-8')
             
-            # Create data URI format that LM Studio expects
             image_handle = {
                 'type': 'image_url',
                 'image_url': {
@@ -101,9 +64,7 @@ class LMStudioClient:
             return None
     
     def prepare_image_base64(self, base64_string: str, mime_type: str = 'image/jpeg') -> Dict[str, Any]:
-        """
-        Prepare image from base64 string using data URI format
-        """
+        """Prepare image from base64 string using data URI format"""
         image_handle = {
             'type': 'image_url',
             'image_url': {
@@ -120,10 +81,10 @@ class LMStudioClient:
                        max_tokens: int = 500,
                        temperature: float = 0.7,
                        stream: bool = False,
-                       timeout: int = 30) -> Dict[str, Any]:
+                       timeout: int = 30) -> Union[Dict[str, Any], Iterator[Dict[str, Any]]]:
         """
-        Chat completion using LM Studio's /v1/chat/completions endpoint
-        Now supports images in messages using multimodal format
+        Chat completion with streaming support
+        Returns either a complete response or a stream iterator
         """
         endpoint = f"{self.base_url}{self.endpoints['chat']}"
         
@@ -132,21 +93,14 @@ class LMStudioClient:
         for msg in messages:
             formatted_msg = {"role": msg["role"]}
             
-            # Handle multimodal content (text + images)
             if "images" in msg and msg["images"]:
                 content = []
-                
-                # Add images first
                 for image in msg["images"]:
                     content.append(image)
-                
-                # Add text content if exists
                 if "content" in msg and msg["content"]:
                     content.append({"type": "text", "text": msg["content"]})
-                
                 formatted_msg["content"] = content
             else:
-                # Regular text message
                 formatted_msg["content"] = msg["content"]
             
             formatted_messages.append(formatted_msg)
@@ -162,16 +116,10 @@ class LMStudioClient:
         self.logger.debug(f"Chat payload: {json.dumps(payload, indent=2)}")
         
         try:
-            self.logger.info(f"Sending chat request to {endpoint}")
-            response = self.session.post(
-                endpoint,
-                json=payload,
-                timeout=timeout
-            )
-            response.raise_for_status()
-            result = response.json()
-            self.logger.info(f"Chat completion successful")
-            return result
+            if stream:
+                return self._handle_streaming_request(endpoint, payload, timeout, "chat")
+            else:
+                return self._handle_standard_request(endpoint, payload, timeout, "chat")
             
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Chat completion request failed: {e}")
@@ -179,41 +127,53 @@ class LMStudioClient:
                 self.logger.error(f"Response content: {e.response.text}")
             return self._mock_chat_completion(messages)
     
-    def chat_with_image(self,
-                       prompt: str,
-                       image_handle: Dict[str, Any],
-                       model: str = "local-model",
-                       max_tokens: int = 500,
-                       temperature: float = 0.7,
-                       stream: bool = False,
-                       timeout: int = 30) -> Dict[str, Any]:
-        """
-        Convenience method for chat with single image
-        """
-        message = {
-            "role": "user",
-            "content": prompt,
-            "images": [image_handle]
-        }
-        
-        return self.chat_completion(
-            messages=[message],
-            model=model,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            stream=stream,
+    def _handle_standard_request(self, endpoint: str, payload: dict, timeout: int, request_type: str) -> Dict[str, Any]:
+        """Handle standard non-streaming request"""
+        self.logger.info(f"Sending {request_type} request to {endpoint}")
+        response = self.session.post(
+            endpoint,
+            json=payload,
             timeout=timeout
         )
+        response.raise_for_status()
+        result = response.json()
+        self.logger.info(f"{request_type} request successful")
+        return result
+    
+    def _handle_streaming_request(self, endpoint: str, payload: dict, timeout: int, request_type: str) -> Iterator[Dict[str, Any]]:
+        """Handle streaming request"""
+        self.logger.info(f"Sending streaming {request_type} request to {endpoint}")
         
+        response = self.session.post(
+            endpoint,
+            json=payload,
+            timeout=timeout,
+            stream=True
+        )
+        response.raise_for_status()
+        
+        for line in response.iter_lines():
+            if line:
+                line = line.decode('utf-8')
+                if line.startswith('data: '):
+                    data = line[6:]  # Remove 'data: ' prefix
+                    if data == '[DONE]':
+                        break
+                    try:
+                        chunk = json.loads(data)
+                        yield chunk
+                    except json.JSONDecodeError:
+                        self.logger.warning(f"Failed to parse streaming chunk: {data}")
+    
     def generate_text(self,
                      prompt: str,
                      model: str = "local-model",
                      max_tokens: int = 500,
                      temperature: float = 0.7,
                      stream: bool = False,
-                     timeout: int = 30) -> Dict[str, Any]:
+                     timeout: int = 30) -> Union[Dict[str, Any], Iterator[Dict[str, Any]]]:
         """
-        Text completion using LM Studio's /v1/completions endpoint
+        Text completion with streaming support
         """
         endpoint = f"{self.base_url}{self.endpoints['completions']}"
         
@@ -226,21 +186,15 @@ class LMStudioClient:
         }
         
         try:
-            self.logger.info(f"Sending completion request to {endpoint}")
-            response = self.session.post(
-                endpoint,
-                json=payload,
-                timeout=timeout
-            )
-            response.raise_for_status()
-            result = response.json()
-            self.logger.info(f"Text generation successful")
-            return result
+            if stream:
+                return self._handle_streaming_request(endpoint, payload, timeout, "completion")
+            else:
+                return self._handle_standard_request(endpoint, payload, timeout, "completion")
             
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Text generation request failed: {e}")
             return self._mock_text_generation(prompt)
-    
+        
     def list_models(self, timeout: int = 10) -> List[Dict[str, Any]]:
         """
         Get available models from LM Studio
@@ -327,49 +281,11 @@ class LMStudioClient:
             "endpoints": self.endpoints
         }
     
-    def _mock_chat_completion(self, messages: List[Dict[str, str]]) -> Dict[str, Any]:
-        """Mock response for chat completion"""
-        last_message = messages[-1]["content"] if messages else "Hello"
-        response_text = f"Mock response to: '{last_message}'"
-        
-        return {
-            "choices": [{
-                "message": {
-                    "role": "assistant",
-                    "content": response_text
-                },
-                "finish_reason": "stop"
-            }],
-            "usage": {
-                "prompt_tokens": sum(len(msg["content"].split()) for msg in messages),
-                "completion_tokens": len(response_text.split()),
-                "total_tokens": sum(len(msg["content"].split()) for msg in messages) + len(response_text.split())
-            }
-        }
-    
-    def _mock_text_generation(self, prompt: str) -> Dict[str, Any]:
-        """Mock response for text generation"""
-        response_text = f"Mock completion for: '{prompt}'"
-        
-        return {
-            "choices": [{
-                "text": response_text,
-                "finish_reason": "stop"
-            }],
-            "usage": {
-                "prompt_tokens": len(prompt.split()),
-                "completion_tokens": len(response_text.split()),
-                "total_tokens": len(prompt.split()) + len(response_text.split())
-            }
-        }
-        
-
     def _mock_chat_completion(self, messages: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Mock response for chat completion with image support"""
         last_message = messages[-1] if messages else {}
         content = last_message.get("content", "Hello")
         
-        # Check if there are images
         has_images = "images" in last_message and last_message["images"]
         
         if has_images:
@@ -391,4 +307,20 @@ class LMStudioClient:
                 "total_tokens": sum(len(msg.get("content", "").split()) for msg in messages) + len(response_text.split())
             }
         }
-
+    
+    def _mock_text_generation(self, prompt: str) -> Dict[str, Any]:
+        """Mock response for text generation"""
+        response_text = f"Mock completion for: '{prompt}'"
+        
+        return {
+            "choices": [{
+                "text": response_text,
+                "finish_reason": "stop"
+            }],
+            "usage": {
+                "prompt_tokens": len(prompt.split()),
+                "completion_tokens": len(response_text.split()),
+                "total_tokens": len(prompt.split()) + len(response_text.split())
+            }
+        }
+        

@@ -19,12 +19,13 @@ import cv2
 import base64
 from typing import Dict, Any, List
 import os
+import time
 
 from lm_studio_connector.lm_studio_client import LMStudioClient
 
 class LMStudioNode(Node):
     """
-    ROS2 Node optimized for LM Studio API with image support using Actions and Services
+    ROS2 Node optimized for LM Studio API with image support and streaming
     """
     
     def __init__(self):
@@ -37,7 +38,6 @@ class LMStudioNode(Node):
         self.declare_parameter('max_tokens', 500)
         self.declare_parameter('temperature', 0.7)
         self.declare_parameter('timeout', 30)
-        self.declare_parameter('stream', False)
         self.declare_parameter('max_history_length', 10)
         
         # Get parameters
@@ -47,7 +47,6 @@ class LMStudioNode(Node):
         self.max_tokens = self.get_parameter('max_tokens').value
         self.temperature = self.get_parameter('temperature').value
         self.timeout = self.get_parameter('timeout').value
-        self.stream = self.get_parameter('stream').value
         self.max_history_length = self.get_parameter('max_history_length').value
         
         # Initialize LM Studio client
@@ -62,7 +61,7 @@ class LMStudioNode(Node):
         # Latest image handle
         self.latest_image_handle = None
         
-        # Beidge for compressed images
+        # Bridge for compressed images
         self.bridge = CvBridge()
         
         # Publishers
@@ -101,7 +100,7 @@ class LMStudioNode(Node):
             callback_group=ReentrantCallbackGroup()
         )
         
-        # Service Servers (for quick requests)
+        # Service Servers (for quick requests) - unchanged
         self.models_service = self.create_service(
             ListModels,
             'list_models',
@@ -130,8 +129,7 @@ class LMStudioNode(Node):
             callback_group=ReentrantCallbackGroup()
         )
         
-        # Subscribers (for image inputs)
-        # 1. Raw images (for real-time cameras)
+        # Subscribers (for image inputs) - unchanged
         self.create_subscription(
             Image,
             'image_input',
@@ -140,7 +138,6 @@ class LMStudioNode(Node):
             callback_group=ReentrantCallbackGroup()
         )
         
-        # 2. Compressed images (for files: PNG, JPEG, BMP)
         self.create_subscription(
             CompressedImage,
             'image_input/compressed',
@@ -149,7 +146,6 @@ class LMStudioNode(Node):
             callback_group=ReentrantCallbackGroup()
         )
         
-        # 3. File paths (fallback)
         self.create_subscription(
             String,
             'image_file_input',
@@ -162,19 +158,17 @@ class LMStudioNode(Node):
         self.initialize_connection()
         
         # Timers
-        self.create_timer(10.0, self.models_update_timer)  # Update models periodically
+        self.create_timer(10.0, self.models_update_timer)
         self.create_timer(10.0, self.status_timer_callback)
         
-        self.get_logger().info("LM Studio Node initialized with Actions and Services")
+        self.get_logger().info("LM Studio Node initialized with streaming support")
 
     def initialize_connection(self):
         """Initialize connection and get available models"""
         try:
-            # Test connection
             connection_status = self.lm_client.test_connection()
             self.get_logger().info(f"Connection test: {json.dumps(connection_status, indent=2)}")
             
-            # Get available models
             self.available_models = self.lm_client.list_models()
             self.publish_models_list()
             
@@ -186,97 +180,36 @@ class LMStudioNode(Node):
         except Exception as e:
             self.get_logger().error(f"Initialization failed: {e}")
 
-
     def parse_image_data(self, image_data):
-        
-        # Handle different image_data formats
+        """Parse image data and return image handle"""
         image_handle = None
         
         if image_data == "latest":
-            # Use the latest image from topics
             image_handle = self.latest_image_handle
             
         elif image_data.startswith("data:image/"):
-            # Base64 encoded image data
-            # Extract base64 part and create handle
             base64_data = image_data.split("base64,")[1]
             image_handle = self.lm_client.prepare_image_base64(base64_data)
             
         elif image_data and os.path.exists(image_data):
-            # File path
             image_handle = self.lm_client.prepare_image(image_data)
-        
-        else:
-            # check the image msg
-            pass
             
-        # Create message with image if available
-#        user_message = {"role": "user", "content": request.prompt}
-#        if image_handle:
-#            user_message["images"] = [image_handle]
         return image_handle
-            
+
     def execute_chat_callback(self, goal_handle):
-        """Action server callback for chat completion"""
+        """Action server callback for chat completion with streaming support"""
         try:
             request = goal_handle.request
-            self.get_logger().info(f"Received chat action request: {request.prompt}")
+            self.get_logger().info(f"Received chat action request: stream={request.stream}, progress_feedback={request.progress_feedback}")
             
-            # Prepare messages
-            messages = []
-            
-            # Add conversation history if requested
-            if request.use_history:
-                messages.extend(self.conversation_history)
-            
-            # Create user message
-            user_message = {"role": "user", "content": request.prompt}
-            
-            # Add image if provided
-#            if request.image_data and self.latest_image_handle:
-#                user_message["images"] = [self.latest_image_handle]
-            image_handle = self.parse_image_data(request.image_data)
-            if image_handle:
-                user_message["images"] = [image_handle]
-            
-            messages.append(user_message)
-            
-            # Generate response
-            response = self.lm_client.chat_completion(
-                messages=messages,
-                model=request.model if request.model else self.model_name,
-                max_tokens=request.max_tokens if request.max_tokens > 0 else self.max_tokens,
-                temperature=request.temperature if request.temperature >= 0 else self.temperature,
-                stream=False,  # Actions don't support streaming well
-                timeout=request.timeout if request.timeout > 0 else self.timeout
-            )
-            
-            # Extract response
-            if 'choices' in response and len(response['choices']) > 0:
-                response_text = response['choices'][0]['message']['content']
-                
-                # Update conversation history if requested
-                if request.use_history:
-                    self.conversation_history.append(user_message)
-                    self.conversation_history.append({"role": "assistant", "content": response_text})
-                    
-                    # Keep history within limits
-                    if len(self.conversation_history) > self.max_history_length:
-                        self.conversation_history = self.conversation_history[-self.max_history_length:]
+            # Handle different modes based on request flags
+            if request.stream:
+                return self._handle_streaming_chat(goal_handle)
+            elif request.progress_feedback:
+                return self._handle_progress_chat(goal_handle)
             else:
-                response_text = "No response generated"
-            
-            # Publish response for subscribers
-            self.publish_text_response(response_text, "chat_action")
-            
-            # Return result
-            result = ChatCompletion.Result()
-            result.response = response_text
-            result.success = True
-            
-            goal_handle.succeed()
-            return result
-            
+                return self._handle_standard_chat(goal_handle)
+                
         except Exception as e:
             self.get_logger().error(f"Chat action failed: {e}")
             result = ChatCompletion.Result()
@@ -285,39 +218,228 @@ class LMStudioNode(Node):
             goal_handle.abort()
             return result
 
-    def execute_completion_callback(self, goal_handle):
-        """Action server callback for text completion"""
+    def _handle_standard_chat(self, goal_handle):
+        """Handle standard non-streaming chat completion"""
+        request = goal_handle.request
+        
+        # Prepare messages
+        messages = []
+        if request.use_history:
+            messages.extend(self.conversation_history)
+        
+        user_message = {"role": "user", "content": request.prompt}
+        image_handle = self.parse_image_data(request.image_data)
+        if image_handle:
+            user_message["images"] = [image_handle]
+        
+        messages.append(user_message)
+        
+        # Generate response
+        response = self.lm_client.chat_completion(
+            messages=messages,
+            model=request.model if request.model else self.model_name,
+            max_tokens=request.max_tokens if request.max_tokens > 0 else self.max_tokens,
+            temperature=request.temperature if request.temperature >= 0 else self.temperature,
+            stream=False,
+            timeout=request.timeout if request.timeout > 0 else self.timeout
+        )
+        
+        # Extract response
+        if 'choices' in response and len(response['choices']) > 0:
+            response_text = response['choices'][0]['message']['content']
+            
+            if request.use_history:
+                self.conversation_history.append(user_message)
+                self.conversation_history.append({"role": "assistant", "content": response_text})
+                if len(self.conversation_history) > self.max_history_length:
+                    self.conversation_history = self.conversation_history[-self.max_history_length:]
+        else:
+            response_text = "No response generated"
+        
+        # Publish response
+        self.publish_text_response(response_text, "chat_action")
+        
+        # Return result
+        result = ChatCompletion.Result()
+        result.response = response_text
+        result.success = True
+        
+        goal_handle.succeed()
+        return result
+
+    def _handle_streaming_chat(self, goal_handle):
+        """Handle streaming chat completion with real-time token feedback"""
+        request = goal_handle.request
+        
+        # Prepare messages
+        messages = []
+        if request.use_history:
+            messages.extend(self.conversation_history)
+        
+        user_message = {"role": "user", "content": request.prompt}
+        image_handle = self.parse_image_data(request.image_data)
+        if image_handle:
+            user_message["images"] = [image_handle]
+        
+        messages.append(user_message)
+        
+        # Get streaming response
+        stream = self.lm_client.chat_completion(
+            messages=messages,
+            model=request.model if request.model else self.model_name,
+            max_tokens=request.max_tokens if request.max_tokens > 0 else self.max_tokens,
+            temperature=request.temperature if request.temperature >= 0 else self.temperature,
+            stream=True,
+            timeout=request.timeout if request.timeout > 0 else self.timeout
+        )
+        
+        full_response = ""
         try:
-            request = goal_handle.request
-            self.get_logger().info(f"Received completion action request: {request.prompt}")
+            for chunk in stream:
+                if goal_handle.is_cancel_requested:
+                    goal_handle.canceled()
+                    return ChatCompletion.Result()
+                
+                if 'choices' in chunk and len(chunk['choices']) > 0:
+                    delta = chunk['choices'][0].get('delta', {})
+                    if 'content' in delta:
+                        token = delta['content']
+                        full_response += token
+                        
+                        # Publish feedback for each token
+                        feedback_msg = ChatCompletion.Feedback()
+                        feedback_msg.partial_response = token
+                        feedback_msg.status = "streaming"
+                        feedback_msg.progress = len(full_response) / request.max_tokens if request.max_tokens > 0 else 0.0
+                        goal_handle.publish_feedback(feedback_msg)
             
-            # Generate response
-            response = self.lm_client.generate_text(
-                prompt=request.prompt,
-                model=request.model if request.model else self.model_name,
-                max_tokens=request.max_tokens if request.max_tokens > 0 else self.max_tokens,
-                temperature=request.temperature if request.temperature >= 0 else self.temperature,
-                stream=False,
-                timeout=request.timeout if request.timeout > 0 else self.timeout
-            )
+            # Final response
+            if request.use_history:
+                self.conversation_history.append(user_message)
+                self.conversation_history.append({"role": "assistant", "content": full_response})
+                if len(self.conversation_history) > self.max_history_length:
+                    self.conversation_history = self.conversation_history[-self.max_history_length:]
             
-            # Extract response
-            if 'choices' in response and len(response['choices']) > 0:
-                response_text = response['choices'][0]['text']
-            else:
-                response_text = "No response generated"
+            self.publish_text_response(full_response, "chat_action_stream")
             
-            # Publish response
-            self.publish_text_response(response_text, "completion_action")
-            
-            # Return result
-            result = TextCompletion.Result()
-            result.response = response_text
+            result = ChatCompletion.Result()
+            result.response = full_response
             result.success = True
-            
             goal_handle.succeed()
             return result
             
+        except Exception as e:
+            self.get_logger().error(f"Streaming chat failed: {e}")
+            result = ChatCompletion.Result()
+            result.response = f"Error during streaming: {str(e)}"
+            result.success = False
+            goal_handle.abort()
+            return result
+
+    def _handle_progress_chat(self, goal_handle):
+        """Handle chat completion with periodic progress feedback"""
+        request = goal_handle.request
+        
+        # Prepare messages
+        messages = []
+        if request.use_history:
+            messages.extend(self.conversation_history)
+        
+        user_message = {"role": "user", "content": request.prompt}
+        image_handle = self.parse_image_data(request.image_data)
+        if image_handle:
+            user_message["images"] = [image_handle]
+        
+        messages.append(user_message)
+        
+        # Start the request in a separate thread (simplified)
+        # In practice, you might need more sophisticated async handling
+        import threading
+        
+        response_result = {"text": "", "error": None}
+        
+        def make_request():
+            try:
+                response = self.lm_client.chat_completion(
+                    messages=messages,
+                    model=request.model if request.model else self.model_name,
+                    max_tokens=request.max_tokens if request.max_tokens > 0 else self.max_tokens,
+                    temperature=request.temperature if request.temperature >= 0 else self.temperature,
+                    stream=False,
+                    timeout=request.timeout if request.timeout > 0 else self.timeout
+                )
+                
+                if 'choices' in response and len(response['choices']) > 0:
+                    response_result["text"] = response['choices'][0]['message']['content']
+                else:
+                    response_result["text"] = "No response generated"
+                    
+            except Exception as e:
+                response_result["error"] = str(e)
+        
+        # Start the request thread
+        request_thread = threading.Thread(target=make_request)
+        request_thread.start()
+        
+        # Send periodic progress updates
+        start_time = time.time()
+        while request_thread.is_alive():
+            if goal_handle.is_cancel_requested:
+                goal_handle.canceled()
+                return ChatCompletion.Result()
+            
+            elapsed = time.time() - start_time
+            progress = min(elapsed / request.timeout, 0.99) if request.timeout > 0 else 0.5
+            
+            feedback_msg = ChatCompletion.Feedback()
+            feedback_msg.partial_response = ""
+            feedback_msg.status = f"Processing... ({elapsed:.1f}s elapsed)"
+            feedback_msg.progress = progress
+            goal_handle.publish_feedback(feedback_msg)
+            
+            time.sleep(1.0)  # Update every second
+        
+        # Wait for thread to complete
+        request_thread.join()
+        
+        # Handle result
+        if response_result["error"]:
+            result = ChatCompletion.Result()
+            result.response = f"Error: {response_result['error']}"
+            result.success = False
+            goal_handle.abort()
+            return result
+        
+        response_text = response_result["text"]
+        
+        if request.use_history:
+            self.conversation_history.append(user_message)
+            self.conversation_history.append({"role": "assistant", "content": response_text})
+            if len(self.conversation_history) > self.max_history_length:
+                self.conversation_history = self.conversation_history[-self.max_history_length:]
+        
+        self.publish_text_response(response_text, "chat_action_progress")
+        
+        result = ChatCompletion.Result()
+        result.response = response_text
+        result.success = True
+        goal_handle.succeed()
+        return result
+
+    def execute_completion_callback(self, goal_handle):
+        """Action server callback for text completion with streaming support"""
+        try:
+            request = goal_handle.request
+            self.get_logger().info(f"Received completion action request: stream={request.stream}, progress_feedback={request.progress_feedback}")
+            
+            # Handle different modes based on request flags
+            if request.stream:
+                return self._handle_streaming_completion(goal_handle)
+            elif request.progress_feedback:
+                return self._handle_progress_completion(goal_handle)
+            else:
+                return self._handle_standard_completion(goal_handle)
+                
         except Exception as e:
             self.get_logger().error(f"Completion action failed: {e}")
             result = TextCompletion.Result()
@@ -326,6 +448,147 @@ class LMStudioNode(Node):
             goal_handle.abort()
             return result
 
+    def _handle_standard_completion(self, goal_handle):
+        """Handle standard non-streaming text completion"""
+        request = goal_handle.request
+        
+        response = self.lm_client.generate_text(
+            prompt=request.prompt,
+            model=request.model if request.model else self.model_name,
+            max_tokens=request.max_tokens if request.max_tokens > 0 else self.max_tokens,
+            temperature=request.temperature if request.temperature >= 0 else self.temperature,
+            stream=False,
+            timeout=request.timeout if request.timeout > 0 else self.timeout
+        )
+        
+        if 'choices' in response and len(response['choices']) > 0:
+            response_text = response['choices'][0]['text']
+        else:
+            response_text = "No response generated"
+        
+        self.publish_text_response(response_text, "completion_action")
+        
+        result = TextCompletion.Result()
+        result.response = response_text
+        result.success = True
+        
+        goal_handle.succeed()
+        return result
+
+    def _handle_streaming_completion(self, goal_handle):
+        """Handle streaming text completion with real-time token feedback"""
+        request = goal_handle.request
+        
+        stream = self.lm_client.generate_text(
+            prompt=request.prompt,
+            model=request.model if request.model else self.model_name,
+            max_tokens=request.max_tokens if request.max_tokens > 0 else self.max_tokens,
+            temperature=request.temperature if request.temperature >= 0 else self.temperature,
+            stream=True,
+            timeout=request.timeout if request.timeout > 0 else self.timeout
+        )
+        
+        full_response = ""
+        try:
+            for chunk in stream:
+                if goal_handle.is_cancel_requested:
+                    goal_handle.canceled()
+                    return TextCompletion.Result()
+                
+                if 'choices' in chunk and len(chunk['choices']) > 0:
+                    text = chunk['choices'][0].get('text', '')
+                    if text:
+                        full_response += text
+                        
+                        feedback_msg = TextCompletion.Feedback()
+                        feedback_msg.partial_response = text
+                        feedback_msg.status = "streaming"
+                        feedback_msg.progress = len(full_response) / request.max_tokens if request.max_tokens > 0 else 0.0
+                        goal_handle.publish_feedback(feedback_msg)
+            
+            self.publish_text_response(full_response, "completion_action_stream")
+            
+            result = TextCompletion.Result()
+            result.response = full_response
+            result.success = True
+            goal_handle.succeed()
+            return result
+            
+        except Exception as e:
+            self.get_logger().error(f"Streaming completion failed: {e}")
+            result = TextCompletion.Result()
+            result.response = f"Error during streaming: {str(e)}"
+            result.success = False
+            goal_handle.abort()
+            return result
+
+    def _handle_progress_completion(self, goal_handle):
+        """Handle text completion with periodic progress feedback"""
+        request = goal_handle.request
+        
+        import threading
+        
+        response_result = {"text": "", "error": None}
+        
+        def make_request():
+            try:
+                response = self.lm_client.generate_text(
+                    prompt=request.prompt,
+                    model=request.model if request.model else self.model_name,
+                    max_tokens=request.max_tokens if request.max_tokens > 0 else self.max_tokens,
+                    temperature=request.temperature if request.temperature >= 0 else self.temperature,
+                    stream=False,
+                    timeout=request.timeout if request.timeout > 0 else self.timeout
+                )
+                
+                if 'choices' in response and len(response['choices']) > 0:
+                    response_result["text"] = response['choices'][0]['text']
+                else:
+                    response_result["text"] = "No response generated"
+                    
+            except Exception as e:
+                response_result["error"] = str(e)
+        
+        request_thread = threading.Thread(target=make_request)
+        request_thread.start()
+        
+        start_time = time.time()
+        while request_thread.is_alive():
+            if goal_handle.is_cancel_requested:
+                goal_handle.canceled()
+                return TextCompletion.Result()
+            
+            elapsed = time.time() - start_time
+            progress = min(elapsed / request.timeout, 0.99) if request.timeout > 0 else 0.5
+            
+            feedback_msg = TextCompletion.Feedback()
+            feedback_msg.partial_response = ""
+            feedback_msg.status = f"Processing... ({elapsed:.1f}s elapsed)"
+            feedback_msg.progress = progress
+            goal_handle.publish_feedback(feedback_msg)
+            
+            time.sleep(1.0)
+        
+        request_thread.join()
+        
+        if response_result["error"]:
+            result = TextCompletion.Result()
+            result.response = f"Error: {response_result['error']}"
+            result.success = False
+            goal_handle.abort()
+            return result
+        
+        response_text = response_result["text"]
+        self.publish_text_response(response_text, "completion_action_progress")
+        
+        result = TextCompletion.Result()
+        result.response = response_text
+        result.success = True
+        goal_handle.succeed()
+        return result
+
+
+    
     def list_models_callback(self, request, response):
         """Service callback for listing models"""
         try:
@@ -564,6 +827,7 @@ class LMStudioNode(Node):
                 
         except Exception as e:
             self.get_logger().error(f"Models update failed: {e}")
+
 
 def main(args=None):
     rclpy.init(args=args)

@@ -1,17 +1,19 @@
 # Request
 string prompt
 string model
+string image_data
 int32 max_tokens
 float32 temperature
-float32 timeout
+int32 timeout
 bool use_history
-string image_data
-
+bool stream
+bool progress_feedback
 ---
 # Result
 string response
 bool success
-
 ---
-# Feedback (optional for streaming)
+# Feedback
 string partial_response
+string status
+float32 progress

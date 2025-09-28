@@ -3,13 +3,15 @@ string prompt
 string model
 int32 max_tokens
 float32 temperature
-float32 timeout
-
+int32 timeout
+bool stream
+bool progress_feedback
 ---
 # Result
 string response
 bool success
-
 ---
-# Feedback (optional)
+# Feedback
 string partial_response
+string status
+float32 progress
