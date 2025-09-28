@@ -11,6 +11,7 @@ A ROS2 node for integrating LM Studio's local LLM API with robotics applications
 ⚡ **Real-time**: ROS2 interfaces for seamless robotics integration  
 🏥 **Health Monitoring**: Connection status and health checks  
 🎯 **Production Ready**: Action servers for reliable long-running tasks  
+🚀 **Streaming Support**: Real-time token streaming with progress feedback  
 
 ## Prerequisites
 
@@ -76,6 +77,8 @@ float32 temperature
 float32 timeout
 bool use_history
 string image_reference  # "latest" or image path or base64
+bool stream             # Enable real-time token streaming
+bool progress_feedback  # Enable periodic progress updates
 
 # Result  
 string response
@@ -83,13 +86,19 @@ bool success
 
 # Feedback
 string partial_response
+string status
+float32 progress
 ```
+
+**Streaming Modes:**
+- `stream=true`: Real-time token-by-token feedback
+- `progress_feedback=true`: Periodic progress updates during processing
+- Both false: Standard blocking request
 
 image_reference could be:
 * 'latest' for last sending image via the image topic or filepath topic.
 * 'image_path' for a saved image on the hard.
 * a string start with "data:image/" for base64.
-
 
 ### Text Completion Action
 **Action Name**: `/text_completion`
@@ -101,10 +110,17 @@ string model
 int32 max_tokens
 float32 temperature
 float32 timeout
+bool stream             # Enable real-time token streaming
+bool progress_feedback  # Enable periodic progress updates
 
 # Result
 string response
 bool success
+
+# Feedback
+string partial_response
+string status
+float32 progress
 ```
 
 ## Service Interface
@@ -137,6 +153,8 @@ bool success
 ## Usage Examples
 
 ### 1. Using Actions (Recommended)
+
+#### Standard Chat (Blocking)
 ```bash
 # Chat with image (using latest received image)
 ros2 action send_goal /chat_completion lm_studio_interfaces/action/ChatCompletion "
@@ -145,13 +163,43 @@ use_history: true
 image_reference: 'latest'
 max_tokens: 300
 temperature: 0.3
+stream: false
+progress_feedback: false
 "
+```
 
-# Text completion
+#### Streaming Chat (Real-time tokens)
+```bash
+# Stream response tokens in real-time
+ros2 action send_goal /chat_completion lm_studio_interfaces/action/ChatCompletion "
+prompt: 'Explain the future of robotics'
+use_history: true
+max_tokens: 500
+stream: true
+progress_feedback: false
+" --feedback
+```
+
+#### Progress Feedback Chat
+```bash
+# Get periodic progress updates during long processing
+ros2 action send_goal /chat_completion lm_studio_interfaces/action/ChatCompletion "
+prompt: 'Write a detailed analysis'
+max_tokens: 1000
+stream: false
+progress_feedback: true
+" --feedback
+```
+
+#### Text Completion with Streaming
+```bash
+# Text completion with real-time streaming
 ros2 action send_goal /text_completion lm_studio_interfaces/action/TextCompletion "
 prompt: 'The future of robotics is'
 max_tokens: 200
-"
+stream: true
+progress_feedback: false
+" --feedback
 ```
 
 ### 2. Using Services
@@ -198,7 +246,8 @@ ros2 topic pub /image_file_input std_msgs/String "data: '/home/user/image.jpg'"
 ros2 action send_goal /chat_completion ChatCompletion "
 prompt: 'Describe this image'
 image_reference: 'latest'
-"
+stream: true
+" --feedback
 ```
 
 ## Response Format
@@ -207,43 +256,76 @@ image_reference: 'latest'
 ```json
 {
   "text": "The generated response text",
-  "type": "chat_action", 
+  "type": "chat_action_stream", 
   "model": "qwen2-vl-2b-instruct",
   "timestamp": 1700000000,
   "history_length": 3
 }
 ```
 
-## Python Client Example
+## Python Client Example with Streaming
 
 ```python
 import rclpy
 from rclpy.action import ActionClient
+from rclpy.node import Node
 from lm_studio_interfaces.action import ChatCompletion
 
-class LMStudioClient:
+class LMStudioClient(Node):
     def __init__(self):
-        self.node = rclpy.create_node('lm_client')
-        self.chat_client = ActionClient(self.node, ChatCompletion, 'chat_completion')
+        super().__init__('lm_client')
+        self.chat_client = ActionClient(self, ChatCompletion, 'chat_completion')
     
-    async def chat(self, prompt, use_history=True):
+    def chat_with_streaming(self, prompt, use_history=True):
         goal_msg = ChatCompletion.Goal()
         goal_msg.prompt = prompt
         goal_msg.use_history = use_history
         goal_msg.image_reference = 'latest'
+        goal_msg.stream = True
+        goal_msg.progress_feedback = False
         
-        await self.chat_client.wait_for_server()
-        result = await self.chat_client.send_goal_async(goal_msg)
-        return result
+        self.chat_client.wait_for_server()
+        
+        # Send goal and process feedback
+        future = self.chat_client.send_goal_async(goal_msg, feedback_callback=self.feedback_callback)
+        future.add_done_callback(self.goal_response_callback)
+    
+    def feedback_callback(self, feedback_msg):
+        # Handle real-time token feedback
+        token = feedback_msg.feedback.partial_response
+        progress = feedback_msg.feedback.progress
+        status = feedback_msg.feedback.status
+        
+        print(f"Token: {token}", end='', flush=True)
+        
+    def goal_response_callback(self, future):
+        goal_handle = future.result()
+        if not goal_handle.accepted:
+            self.get_logger().info('Goal rejected')
+            return
+            
+        self.get_logger().info('Goal accepted')
+        
+        # Get final result
+        result_future = goal_handle.get_result_async()
+        result_future.add_done_callback(self.get_result_callback)
+    
+    def get_result_callback(self, future):
+        result = future.result().result
+        if result.success:
+            self.get_logger().info(f'Final response: {result.response}')
+        else:
+            self.get_logger().error(f'Action failed: {result.response}')
 
 # Usage
 client = LMStudioClient()
-result = client.chat("Hello, how are you?")
+client.chat_with_streaming("Hello, how are you?")
+rclpy.spin(client)
 ```
 
 ## Integration Examples
 
-### With USB Camera
+### With USB Camera and Streaming
 ```bash
 # Terminal 1: Start camera
 ros2 run usb_cam usb_cam_node_exe
@@ -251,12 +333,13 @@ ros2 run usb_cam usb_cam_node_exe
 # Terminal 2: Start LM Studio node
 ros2 run lm_studio_connector lm_studio_node
 
-# Terminal 3: Process images and chat
+# Terminal 3: Process images and chat with streaming
 ros2 topic pub /image_input sensor_msgs/Image <camera_topic>
 ros2 action send_goal /chat_completion ChatCompletion "
 prompt: 'What objects are visible?'
 image_reference: 'latest'
-"
+stream: true
+" --feedback
 ```
 
 ## Troubleshooting
@@ -274,6 +357,11 @@ curl http://localhost:1234/v1/models
 lms get qwen2-vl-2b-instruct
 ```
 
+**Streaming not working:**
+- Ensure LM Studio supports streaming for your model
+- Check that `stream=true` is set in action goal
+- Use `--feedback` flag to see streaming output
+
 **Debug mode:**
 ```bash
 ros2 run lm_studio_connector lm_studio_node --ros-args --log-level debug
@@ -285,6 +373,8 @@ ros2 run lm_studio_connector lm_studio_node --ros-args --log-level debug
 - Set `temperature` lower (0.1-0.3) for deterministic responses
 - Use `reset_chat` service to manage context length
 - Monitor `/lm_studio_status` for system health
+- Use streaming for long responses to provide real-time feedback
+- Use progress feedback for very long processing tasks
 
 ## License
 
@@ -297,6 +387,7 @@ For issues and questions:
 - Ensure LM Studio is running and accessible
 - Verify you have compatible models downloaded
 - Check ROS2 interface connections
+- For streaming issues, verify model supports streaming
 
 ## Contributing
 
