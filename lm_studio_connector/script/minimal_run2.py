@@ -21,7 +21,7 @@ class MinimalChatClient(Node):
         goal_msg = ChatCompletion.Goal()
         goal_msg.prompt = prompt
         goal_msg.use_history = True
-        goal_msg.stream = False
+        goal_msg.stream = False # Try to toggle this
         
         # Send goal with callbacks
         self.action_client.send_goal_async(
