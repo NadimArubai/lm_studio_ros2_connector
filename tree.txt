@@ -1,4 +1,4 @@
-lm_sutdio_ros2_connector
+.
 ├── lm_studio_connector
 │   ├── launch
 │   │   ├── lm_studio.launch.py
@@ -12,11 +12,18 @@ lm_sutdio_ros2_connector
 │   ├── package.xml
 │   ├── resource
 │   │   └── lm_studio_connector
+│   ├── script
+│   │   ├── minimal_run2.py
+│   │   └── minimal_run.py
 │   ├── setup.cfg
 │   ├── setup.py
 │   └── test
+│       ├── run_tests.sh
 │       ├── test_copyright.py
 │       ├── test_flake8.py
+│       ├── test_integration.py
+│       ├── test_lm_studio_client.py
+│       ├── test_lm_studio_ros_node.py
 │       └── test_pep257.py
 ├── lm_studio_interfaces
 │   ├── action
@@ -31,3 +38,5 @@ lm_sutdio_ros2_connector
 │       └── SetModel.srv
 ├── README.md
 └── tree.txt
+
+10 directories, 30 files

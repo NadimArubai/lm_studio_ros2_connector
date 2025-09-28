@@ -7,7 +7,9 @@ import json
 from typing import Dict, Any, List
 
 # Add the parent directory to path to import the client
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+#sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 from lm_studio_client import LMStudioClient
 
