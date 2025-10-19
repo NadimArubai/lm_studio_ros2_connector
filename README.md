@@ -76,7 +76,7 @@ int32 max_tokens
 float32 temperature
 float32 timeout
 bool use_history
-string image_reference  # "latest" or image path or base64
+string image_data       # "latest" or image path or base64
 bool stream             # Enable real-time token streaming
 bool progress_feedback  # Enable periodic progress updates
 
@@ -235,17 +235,20 @@ ros2 topic echo /lm_text_response
 1. **ROS2 Image Messages** (`sensor_msgs/Image`) - Real-time camera data
 2. **File Paths** - Pre-captured images
 3. **Compressed Images** - Efficient transport
-4. **Image References** - Reference previously sent images
+4. **Image Data** - Reference previously sent images
 
 ### Best Practices:
 ```bash
+# First run/launch the stream action/service node
+ros2 launch lm_studio_connector lm_studio.launch.py
+
 # Send image first
 ros2 topic pub /image_file_input std_msgs/String "data: '/home/user/image.jpg'"
 
 # Then reference it in actions
 ros2 action send_goal /chat_completion ChatCompletion "
 prompt: 'Describe this image'
-image_reference: 'latest'
+image_data: 'latest'
 stream: true
 " --feedback
 ```
@@ -352,7 +355,7 @@ ros2 run lm_studio_connector lm_studio_node
 ros2 topic pub /image_input sensor_msgs/Image <camera_topic>
 ros2 action send_goal /chat_completion ChatCompletion "
 prompt: 'What objects are visible?'
-image_reference: 'latest'
+image_data: 'latest'
 stream: true
 " --feedback
 ```
